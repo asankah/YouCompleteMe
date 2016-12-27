@@ -22,10 +22,10 @@ from __future__ import absolute_import
 from future import standard_library
 standard_library.install_aliases()
 from builtins import *  # noqa
+from ycm import vimsupport
 
 import os
 import sys
-import vim
 import functools
 import re
 
@@ -54,7 +54,7 @@ def Memoize( obj ):
 def PathToPythonInterpreter():
   from ycmd import utils
 
-  python_interpreter = vim.eval( 'g:ycm_server_python_interpreter' )
+  python_interpreter = vimsupport.Eval( 'g:ycm_server_python_interpreter' )
 
   if python_interpreter:
     if IsPythonVersionCorrect( python_interpreter ):

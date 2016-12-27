@@ -25,7 +25,7 @@ standard_library.install_aliases()
 from builtins import *  # noqa
 
 from future.utils import iterkeys
-import vim
+import neovim
 import os
 import json
 import re
@@ -47,6 +47,22 @@ FIXIT_OPENING_BUFFERS_MESSAGE_FORMAT = (
 
 NO_SELECTION_MADE_MSG = "No valid selection was made; aborting."
 
+vim = None
+
+VimError = None
+
+def SetUpVimSupport(vim_instance):
+  global vim
+  global VimError
+  vim = vim_instance
+  VimError = vim.error
+  
+
+def CurrentBufferNumber():
+  return vim.current.buffer.number
+
+def Eval(string):
+  return vim.eval(string)
 
 def CurrentLineAndColumn():
   """Returns the 0-based current line and 0-based current column."""
@@ -384,6 +400,10 @@ def GetVimCommand( user_command, default = 'edit' ):
   if vim_command == 'edit' and not BufferIsUsable( vim.current.buffer ):
     vim_command = 'split'
   return vim_command
+
+
+def Command(command):
+  vim.command(command)
 
 
 # Both |line| and |column| need to be 1-based

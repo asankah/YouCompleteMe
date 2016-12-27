@@ -23,7 +23,6 @@ from future import standard_library
 standard_library.install_aliases()
 from builtins import *  # noqa
 
-import vim
 from ycm import vimsupport
 from ycmd import utils
 from ycmd.completers.completer import Completer
@@ -77,7 +76,7 @@ class OmniCompleter( Completer ):
       return []
 
     try:
-      return_value = int( vim.eval( self._omnifunc + '(1,"")' ) )
+      return_value = int( vimsupport.Eval( self._omnifunc + '(1,"")' ) )
       if return_value < 0:
         # FIXME: Technically, if the return is -1 we should raise an error
         return []
@@ -87,7 +86,7 @@ class OmniCompleter( Completer ):
                         vimsupport.EscapeForVim( request_data[ 'query' ] ),
                         "')" ]
 
-      items = vim.eval( ''.join( omnifunc_call ) )
+      items = vimsupport.Eval( ''.join( omnifunc_call ) )
 
       if isinstance( items, dict ) and 'words' in items:
         items = items[ 'words' ]
@@ -97,14 +96,14 @@ class OmniCompleter( Completer ):
 
       return list( filter( bool, items ) )
 
-    except ( TypeError, ValueError, vim.error ) as error:
+    except ( TypeError, ValueError, vimsupport.VimError ) as error:
       vimsupport.PostVimMessage(
         OMNIFUNC_RETURNED_BAD_VALUE + ' ' + str( error ) )
       return []
 
 
   def OnFileReadyToParse( self, request_data ):
-    self._omnifunc = utils.ToUnicode( vim.eval( '&omnifunc' ) )
+    self._omnifunc = utils.ToUnicode( vimsupport.Eval( '&omnifunc' ) )
 
 
   def FilterAndSortCandidatesInner( self, candidates, sort_property, query ):

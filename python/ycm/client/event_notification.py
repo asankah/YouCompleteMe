@@ -23,49 +23,47 @@ from future import standard_library
 standard_library.install_aliases()
 from builtins import *  # noqa
 
-from ycm.client.base_request import ( BaseRequest, BuildRequestData,
-                                      JsonFromFuture, HandleServerException )
+from ycm.client.base_request import (BaseRequest, BuildRequestData,
+                                      HandleServerException)
 
 
-class EventNotification( BaseRequest ):
-  def __init__( self, event_name, filepath = None, extra_data = None ):
-    super( EventNotification, self ).__init__()
+class EventNotification(BaseRequest):
+
+  def __init__(self, event_name, ycmd_proxy, filepath=None, extra_data=None):
+    super(EventNotification, self).__init__(ycmd_proxy)
     self._event_name = event_name
     self._filepath = filepath
     self._extra_data = extra_data
     self._response_future = None
     self._cached_response = None
 
-
-  def Start( self ):
-    request_data = BuildRequestData( self._filepath )
+  def Start(self):
+    request_data = BuildRequestData(self._filepath)
     if self._extra_data:
-      request_data.update( self._extra_data )
-    request_data[ 'event_name' ] = self._event_name
+      request_data.update(self._extra_data)
+    request_data['event_name'] = self._event_name
 
-    self._response_future = self.PostDataToHandlerAsync( request_data,
-                                                         'event_notification' )
+    self._response_future = self._ycmd.EventNotification(request_data)
 
+  def Done(self):
+    return bool(self._response_future) and self._response_future.done()
 
-  def Done( self ):
-    return bool( self._response_future ) and self._response_future.done()
-
-
-  def Response( self ):
+  def Response(self):
     if self._cached_response:
       return self._cached_response
 
     if not self._response_future or self._event_name != 'FileReadyToParse':
       return []
 
-    with HandleServerException( truncate = True ):
-      self._cached_response = JsonFromFuture( self._response_future )
+    with HandleServerException(self._ycmd, truncate=True):
+      self._cached_response = self._response_future.result()
 
     return self._cached_response if self._cached_response else []
 
 
-def SendEventNotificationAsync( event_name,
-                                filepath = None,
-                                extra_data = None ):
-  event = EventNotification( event_name, filepath, extra_data )
+def SendEventNotificationAsync(event_name,
+                               ycmd_proxy,
+                               filepath=None,
+                               extra_data=None):
+  event = EventNotification(event_name, ycmd_proxy, filepath, extra_data)
   event.Start()

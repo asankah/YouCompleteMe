@@ -23,31 +23,30 @@ from future import standard_library
 standard_library.install_aliases()
 from builtins import *  # noqa
 
-from ycm.client.base_request import ( BaseRequest, BuildRequestData,
-                                      HandleServerException )
+from ycm.client.base_request import (BaseRequest, BuildRequestData,
+                                     HandleServerException)
 
 
-class CompleterAvailableRequest( BaseRequest ):
-  def __init__( self, filetypes ):
-    super( CompleterAvailableRequest, self ).__init__()
+class CompleterAvailableRequest(BaseRequest):
+
+  def __init__(self, filetypes, ycmd_proxy):
+    super(CompleterAvailableRequest, self).__init__(ycmd_proxy)
     self.filetypes = filetypes
     self._response = None
 
-
-  def Start( self ):
+  def Start(self):
     request_data = BuildRequestData()
-    request_data.update( { 'filetypes': self.filetypes } )
-    with HandleServerException():
-      self._response = self.PostDataToHandler( request_data,
-                                               'semantic_completion_available' )
+    request_data.update({'filetypes': self.filetypes})
+    with HandleServerException(self._ycmd):
+      self._response = self._ycmd.FiletypeCompletionAvailable(
+          request_data).result()
 
-
-  def Response( self ):
+  def Response(self):
     return self._response
 
 
-def SendCompleterAvailableRequest( filetypes ):
-  request = CompleterAvailableRequest( filetypes )
+def SendCompleterAvailableRequest(filetypes, ycmd_proxy):
+  request = CompleterAvailableRequest(filetypes, ycmd_proxy)
   # This is a blocking call.
   request.Start()
   return request.Response()

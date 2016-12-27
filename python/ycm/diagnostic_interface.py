@@ -27,7 +27,6 @@ from future.utils import itervalues, iteritems
 from collections import defaultdict, namedtuple
 from ycm import vimsupport
 from ycm.diagnostic_filter import DiagnosticFilter, CompileLevel
-import vim
 
 
 class DiagnosticInterface( object ):
@@ -100,7 +99,7 @@ class DiagnosticInterface( object ):
 
 
   def _EchoDiagnosticForLine( self, line_num ):
-    buffer_num = vim.current.buffer.number
+    buffer_num = vimsupport.CurrentBufferNumber()
     diags = self._buffer_number_to_line_to_diags[ buffer_num ][ line_num ]
     if not diags:
       if self._diag_message_needs_clearing:
@@ -120,7 +119,7 @@ class DiagnosticInterface( object ):
   def _FilterDiagnostics( self, predicate ):
     matched_diags = []
     line_to_diags = self._buffer_number_to_line_to_diags[
-      vim.current.buffer.number ]
+        vimsupport.CurrentBufferNumber() ]
 
     for diags in itervalues( line_to_diags ):
       matched_diags.extend( list(
@@ -130,7 +129,7 @@ class DiagnosticInterface( object ):
 
 def _UpdateSquiggles( buffer_number_to_line_to_diags ):
   vimsupport.ClearYcmSyntaxMatches()
-  line_to_diags = buffer_number_to_line_to_diags[ vim.current.buffer.number ]
+  line_to_diags = buffer_number_to_line_to_diags[ vimsupport.CurrentBufferNumber() ]
 
   for diags in itervalues( line_to_diags ):
     for diag in diags:
@@ -174,7 +173,7 @@ def _UpdateSigns( placed_signs, buffer_number_to_line_to_diags, next_sign_id ):
 
   if dummy_sign_needed:
     vimsupport.PlaceDummySign( next_sign_id + 1,
-                               vim.current.buffer.number,
+                              vimsupport.CurrentBufferNumber(),
                                new_signs[ 0 ].line )
 
   # We place only those signs that haven't been placed yet.
@@ -187,7 +186,7 @@ def _UpdateSigns( placed_signs, buffer_number_to_line_to_diags, next_sign_id ):
   _UnplaceObsoleteSigns( kept_signs, placed_signs )
 
   if dummy_sign_needed:
-    vimsupport.UnPlaceDummySign( next_sign_id + 1, vim.current.buffer.number )
+    vimsupport.UnPlaceDummySign( next_sign_id + 1, vimsupport.CurrentBufferNumber() )
 
   return new_placed_signs, next_sign_id
 

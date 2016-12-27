@@ -30,7 +30,6 @@ DIR_OF_CURRENT_SCRIPT = os.path.dirname( os.path.abspath( __file__ ) )
 DIR_OF_YCMD = os.path.join( DIR_OF_CURRENT_SCRIPT, '..', '..', 'third_party',
                             'ycmd' )
 
-
 def SetUpSystemPaths():
   sys.path.insert( 0, os.path.join( DIR_OF_YCMD ) )
 

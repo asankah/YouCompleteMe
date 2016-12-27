@@ -24,83 +24,76 @@ standard_library.install_aliases()
 from builtins import *  # noqa
 
 from ycmd.utils import ToUnicode
-from ycm.client.base_request import ( BaseRequest, JsonFromFuture,
-                                      HandleServerException,
-                                      MakeServerException )
+from ycm.client.base_request import (BaseRequest, 
+                                     HandleServerException, MakeServerException)
 
 TIMEOUT_SECONDS = 0.5
 
 
-class CompletionRequest( BaseRequest ):
-  def __init__( self, request_data ):
-    super( CompletionRequest, self ).__init__()
+class CompletionRequest(BaseRequest):
+
+  def __init__(self, request_data, ycmd_proxy):
+    super(CompletionRequest, self).__init__(ycmd_proxy)
     self.request_data = request_data
     self._response_future = None
 
+  def Start(self):
+    self._response_future = self._ycmd.GetCompletions(self.request_data)
 
-  def Start( self ):
-    self._response_future = self.PostDataToHandlerAsync( self.request_data,
-                                                         'completions',
-                                                         TIMEOUT_SECONDS )
+  def Done(self):
+    return bool(self._response_future) and self._response_future.done()
 
-
-  def Done( self ):
-    return bool( self._response_future ) and self._response_future.done()
-
-
-  def RawResponse( self ):
+  def RawResponse(self):
     if not self._response_future:
       return []
-    with HandleServerException( truncate = True ):
-      response = JsonFromFuture( self._response_future )
+    with HandleServerException(self._ycmd, truncate=True):
+      response = self._response_future.result()
 
-      errors = response[ 'errors' ] if 'errors' in response else []
+      errors = response['errors'] if 'errors' in response else []
       for e in errors:
-        with HandleServerException( truncate = True ):
-          raise MakeServerException( e )
+        with HandleServerException(self._ycmd, truncate=True):
+          raise MakeServerException(e)
 
-      return response[ 'completions' ]
+      return response['completions']
     return []
 
+  def Response(self):
+    return _ConvertCompletionDatasToVimDatas(self.RawResponse())
 
-  def Response( self ):
-    return _ConvertCompletionDatasToVimDatas( self.RawResponse() )
 
-
-def ConvertCompletionDataToVimData( completion_data ):
+def ConvertCompletionDataToVimData(completion_data):
   # see :h complete-items for a description of the dictionary fields
   vim_data = {
-    'word'  : '',
-    'dup'   : 1,
-    'empty' : 1,
+      'word': '',
+      'dup': 1,
+      'empty': 1,
   }
 
-  if ( 'extra_data' in completion_data and
-       'doc_string' in completion_data[ 'extra_data' ] ):
-    doc_string = completion_data[ 'extra_data' ][ 'doc_string' ]
+  if ('extra_data' in completion_data and
+      'doc_string' in completion_data['extra_data']):
+    doc_string = completion_data['extra_data']['doc_string']
   else:
-    doc_string = ""
+    doc_string = ''
 
   if 'insertion_text' in completion_data:
-    vim_data[ 'word' ] = completion_data[ 'insertion_text' ]
+    vim_data['word'] = completion_data['insertion_text']
   if 'menu_text' in completion_data:
-    vim_data[ 'abbr' ] = completion_data[ 'menu_text' ]
+    vim_data['abbr'] = completion_data['menu_text']
   if 'extra_menu_info' in completion_data:
-    vim_data[ 'menu' ] = completion_data[ 'extra_menu_info' ]
+    vim_data['menu'] = completion_data['extra_menu_info']
   if 'kind' in completion_data:
-    kind = ToUnicode( completion_data[ 'kind' ] )
+    kind = ToUnicode(completion_data['kind'])
     if kind:
-      vim_data[ 'kind' ] = kind[ 0 ].lower()
+      vim_data['kind'] = kind[0].lower()
   if 'detailed_info' in completion_data:
-    vim_data[ 'info' ] = completion_data[ 'detailed_info' ]
+    vim_data['info'] = completion_data['detailed_info']
     if doc_string:
-      vim_data[ 'info' ] += '\n' + doc_string
+      vim_data['info'] += '\n' + doc_string
   elif doc_string:
-    vim_data[ 'info' ] = doc_string
+    vim_data['info'] = doc_string
 
   return vim_data
 
 
-def _ConvertCompletionDatasToVimDatas( response_data ):
-  return [ ConvertCompletionDataToVimData( x )
-           for x in response_data ]
+def _ConvertCompletionDatasToVimDatas(response_data):
+  return [ConvertCompletionDataToVimData(x) for x in response_data]

@@ -31,20 +31,20 @@ from ycm.client.base_request import BaseRequest, HandleServerException
 # This class can be used to keep the ycmd server alive for the duration of the
 # life of the client. By default, ycmd shuts down if it doesn't see a request in
 # a while.
-class YcmdKeepalive( object ):
-  def __init__( self, ping_interval_seconds = 60 * 10 ):
-    self._keepalive_thread = Thread( target = self._ThreadMain )
+class YcmdKeepalive(object):
+
+  def __init__(self, ycmd_proxy, ping_interval_seconds=60 * 10):
+    self._keepalive_thread = Thread(target=self._ThreadMain)
     self._keepalive_thread.daemon = True
     self._ping_interval_seconds = ping_interval_seconds
+    self._ycmd = ycmd_proxy
 
-
-  def Start( self ):
+  def Start(self):
     self._keepalive_thread.start()
 
-
-  def _ThreadMain( self ):
+  def _ThreadMain(self):
     while True:
-      time.sleep( self._ping_interval_seconds )
+      time.sleep(self._ping_interval_seconds)
 
-      with HandleServerException( display = False ):
-        BaseRequest.GetDataFromHandler( 'healthy' )
+      with HandleServerException(self._ycmd, display=False):
+        self._ycmd.GetHealthy({}).result()

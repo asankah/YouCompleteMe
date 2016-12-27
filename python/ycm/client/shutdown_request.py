@@ -28,17 +28,17 @@ from ycm.client.base_request import BaseRequest, HandleServerException
 TIMEOUT_SECONDS = 0.1
 
 
-class ShutdownRequest( BaseRequest ):
-  def __init__( self ):
-    super( BaseRequest, self ).__init__()
+class ShutdownRequest(BaseRequest):
+
+  def __init__(self, ycmd_proxy):
+    super(BaseRequest, self).__init__(ycmd_proxy)
+
+  def Start(self):
+    with HandleServerException(self._ycmd, display=False):
+      self._ycmd.Shutdown({}).result(timeout=TIMEOUT_SECONDS)
 
 
-  def Start( self ):
-    with HandleServerException( display = False ):
-      self.PostDataToHandler( {}, 'shutdown', TIMEOUT_SECONDS )
-
-
-def SendShutdownRequest():
-  request = ShutdownRequest()
+def SendShutdownRequest(ycmd_proxy):
+  request = ShutdownRequest(ycmd_proxy)
   # This is a blocking call.
   request.Start()

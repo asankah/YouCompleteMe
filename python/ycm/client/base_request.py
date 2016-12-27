@@ -39,125 +39,29 @@ from ycmd.hmac_utils import CreateRequestHmac, CreateHmac, SecureBytesEqual
 from ycmd.responses import ServerError, UnknownExtraConf
 
 _HEADERS = {'content-type': 'application/json'}
-_EXECUTOR = UnsafeThreadPoolExecutor( max_workers = 30 )
+_EXECUTOR = UnsafeThreadPoolExecutor(max_workers=30)
 # Setting this to None seems to screw up the Requests/urllib3 libs.
 _DEFAULT_TIMEOUT_SEC = 30
 _HMAC_HEADER = 'x-ycm-hmac'
-_logger = logging.getLogger( __name__ )
+_logger = logging.getLogger(__name__)
 
 
-class BaseRequest( object ):
+class BaseRequest(object):
 
-  def __init__( self ):
+  def __init__(self, ycmd_proxy):
+    self._ycmd = ycmd_proxy
+
+  def Start(self):
     pass
 
-
-  def Start( self ):
-    pass
-
-
-  def Done( self ):
+  def Done(self):
     return True
 
-
-  def Response( self ):
+  def Response(self):
     return {}
 
-  # This method blocks
-  # |timeout| is num seconds to tolerate no response from server before giving
-  # up; see Requests docs for details (we just pass the param along).
-  @staticmethod
-  def GetDataFromHandler( handler, timeout = _DEFAULT_TIMEOUT_SEC ):
-    return JsonFromFuture( BaseRequest._TalkToHandlerAsync( '',
-                                                            handler,
-                                                            'GET',
-                                                            timeout ) )
 
-
-  # This is the blocking version of the method. See below for async.
-  # |timeout| is num seconds to tolerate no response from server before giving
-  # up; see Requests docs for details (we just pass the param along).
-  @staticmethod
-  def PostDataToHandler( data, handler, timeout = _DEFAULT_TIMEOUT_SEC ):
-    return JsonFromFuture( BaseRequest.PostDataToHandlerAsync( data,
-                                                               handler,
-                                                               timeout ) )
-
-
-  # This returns a future! Use JsonFromFuture to get the value.
-  # |timeout| is num seconds to tolerate no response from server before giving
-  # up; see Requests docs for details (we just pass the param along).
-  @staticmethod
-  def PostDataToHandlerAsync( data, handler, timeout = _DEFAULT_TIMEOUT_SEC ):
-    return BaseRequest._TalkToHandlerAsync( data, handler, 'POST', timeout )
-
-
-  # This returns a future! Use JsonFromFuture to get the value.
-  # |method| is either 'POST' or 'GET'.
-  # |timeout| is num seconds to tolerate no response from server before giving
-  # up; see Requests docs for details (we just pass the param along).
-  @staticmethod
-  def _TalkToHandlerAsync( data,
-                           handler,
-                           method,
-                           timeout = _DEFAULT_TIMEOUT_SEC ):
-    def SendRequest( data, handler, method, timeout ):
-      request_uri = _BuildUri( handler )
-      if method == 'POST':
-        sent_data = _ToUtf8Json( data )
-        return BaseRequest.session.post(
-            request_uri,
-            data = sent_data,
-            headers = BaseRequest._ExtraHeaders( method,
-                                                 request_uri,
-                                                 sent_data ),
-            timeout = timeout )
-      if method == 'GET':
-        return BaseRequest.session.get(
-            request_uri,
-            headers = BaseRequest._ExtraHeaders( method, request_uri ),
-            timeout = timeout )
-
-    @retries( 5, delay = 0.5, backoff = 1.5 )
-    def DelayedSendRequest( data, handler, method ):
-      request_uri = _BuildUri( handler )
-      if method == 'POST':
-        sent_data = _ToUtf8Json( data )
-        return requests.post(
-            request_uri,
-            data = sent_data,
-            headers = BaseRequest._ExtraHeaders( method,
-                                                 request_uri,
-                                                 sent_data ) )
-      if method == 'GET':
-        return requests.get(
-            request_uri,
-            headers = BaseRequest._ExtraHeaders( method, request_uri ) )
-
-    if not _CheckServerIsHealthyWithCache():
-      return _EXECUTOR.submit( DelayedSendRequest, data, handler, method )
-
-    return SendRequest( data, handler, method, timeout )
-
-
-  @staticmethod
-  def _ExtraHeaders( method, request_uri, request_body = None ):
-    if not request_body:
-      request_body = bytes( b'' )
-    headers = dict( _HEADERS )
-    headers[ _HMAC_HEADER ] = b64encode(
-        CreateRequestHmac( ToBytes( method ),
-                           ToBytes( urllib.parse.urlparse( request_uri ).path ),
-                           request_body,
-                           BaseRequest.hmac_secret ) )
-    return headers
-
-  session = FuturesSession( executor = _EXECUTOR )
-  server_location = ''
-  hmac_secret = ''
-
-
-def BuildRequestData( filepath = None ):
+def BuildRequestData(filepath=None):
   """Build request for the current buffer or the buffer corresponding to
   |filepath| if specified."""
   current_filepath = vimsupport.GetCurrentBufferFilepath()
@@ -165,39 +69,24 @@ def BuildRequestData( filepath = None ):
   if filepath and current_filepath != filepath:
     # Cursor position is irrelevant when filepath is not the current buffer.
     return {
-      'filepath': filepath,
-      'line_num': 1,
-      'column_num': 1,
-      'file_data': vimsupport.GetUnsavedAndSpecifiedBufferData( filepath )
+        'filepath': filepath,
+        'line_num': 1,
+        'column_num': 1,
+        'file_data': vimsupport.GetUnsavedAndSpecifiedBufferData(filepath)
     }
 
   line, column = vimsupport.CurrentLineAndColumn()
 
   return {
-    'filepath': current_filepath,
-    'line_num': line + 1,
-    'column_num': column + 1,
-    'file_data': vimsupport.GetUnsavedAndSpecifiedBufferData( current_filepath )
+      'filepath': current_filepath,
+      'line_num': line + 1,
+      'column_num': column + 1,
+      'file_data': vimsupport.GetUnsavedAndSpecifiedBufferData(current_filepath)
   }
 
 
-def JsonFromFuture( future ):
-  response = future.result()
-  _ValidateResponseObject( response )
-  if response.status_code == requests.codes.server_error:
-    raise MakeServerException( response.json() )
-
-  # We let Requests handle the other status types, we only handle the 500
-  # error code.
-  response.raise_for_status()
-
-  if response.text:
-    return response.json()
-  return None
-
-
 @contextlib.contextmanager
-def HandleServerException( display = True, truncate = False ):
+def HandleServerException(ycmd_proxy, display=True, truncate=False):
   """Catch any exception raised through server communication. If it is raised
   because of a unknown .ycm_extra_conf.py file, load the file or ignore it after
   asking the user. Otherwise, log the exception and display its message to the
@@ -215,84 +104,35 @@ def HandleServerException( display = True, truncate = False ):
      response = BaseRequest.PostDataToHandler( ... )
   """
   try:
-    try:
-      yield
-    except UnknownExtraConf as e:
-      if vimsupport.Confirm( str( e ) ):
-        _LoadExtraConfFile( e.extra_conf_file )
-      else:
-        _IgnoreExtraConfFile( e.extra_conf_file )
+    yield
+  except UnknownExtraConf as:
+    if vimsupport.Confirm(str(e)):
+      ycmd_proxy.LoadExtraConfFile({'filepath': e.extra_conf_file})
+    else:
+      ycmd_proxy.IgnoreExtraConfFile({'filepath': e.extra_conf_file})
   except Exception as e:
-    _logger.exception( 'Error while handling server response' )
+    _logger.exception('Error while handling server response')
     if display:
-      DisplayServerException( e, truncate )
+      DisplayServerException(e, truncate)
 
 
-def _LoadExtraConfFile( filepath ):
-  BaseRequest.PostDataToHandler( { 'filepath': filepath },
-                                 'load_extra_conf_file' )
-
-
-def _IgnoreExtraConfFile( filepath ):
-  BaseRequest.PostDataToHandler( { 'filepath': filepath },
-                                 'ignore_extra_conf_file' )
-
-
-def DisplayServerException( exception, truncate = False ):
-  serialized_exception = str( exception )
+def DisplayServerException(exception, truncate=False):
+  serialized_exception = str(exception)
 
   # We ignore the exception about the file already being parsed since it comes
   # up often and isn't something that's actionable by the user.
   if 'already being parsed' in serialized_exception:
     return
-  vimsupport.PostVimMessage( serialized_exception, truncate = truncate )
+  vimsupport.PostVimMessage(serialized_exception, truncate=truncate)
 
 
-def _ToUtf8Json( data ):
-  return ToBytes( json.dumps( data ) if data else None )
+def _ToUtf8Json(data):
+  return ToBytes(json.dumps(data) if data else None)
 
 
-def _ValidateResponseObject( response ):
-  our_hmac = CreateHmac( response.content, BaseRequest.hmac_secret )
-  their_hmac = ToBytes( b64decode( response.headers[ _HMAC_HEADER ] ) )
-  if not SecureBytesEqual( our_hmac, their_hmac ):
-    raise RuntimeError( 'Received invalid HMAC for response!' )
-  return True
+def MakeServerException(data):
+  if data['exception']['TYPE'] == UnknownExtraConf.__name__:
+    return UnknownExtraConf(data['exception']['extra_conf_file'])
 
-
-def _BuildUri( handler ):
-  return native( ToBytes( urllib.parse.urljoin( BaseRequest.server_location,
-                                                handler ) ) )
-
-
-SERVER_HEALTHY = False
-
-
-def _CheckServerIsHealthyWithCache():
-  global SERVER_HEALTHY
-
-  def _ServerIsHealthy():
-    request_uri = _BuildUri( 'healthy' )
-    response = requests.get( request_uri,
-                             headers = BaseRequest._ExtraHeaders(
-                                 'GET', request_uri, bytes( b'' ) ) )
-    _ValidateResponseObject( response )
-    response.raise_for_status()
-    return response.json()
-
-  if SERVER_HEALTHY:
-    return True
-
-  try:
-    SERVER_HEALTHY = _ServerIsHealthy()
-    return SERVER_HEALTHY
-  except:
-    return False
-
-
-def MakeServerException( data ):
-  if data[ 'exception' ][ 'TYPE' ] == UnknownExtraConf.__name__:
-    return UnknownExtraConf( data[ 'exception' ][ 'extra_conf_file' ] )
-
-  return ServerError( '{0}: {1}'.format( data[ 'exception' ][ 'TYPE' ],
-                                         data[ 'message' ] ) )
+  return ServerError('{0}: {1}'.format(data['exception']['TYPE'], data[
+      'message']))

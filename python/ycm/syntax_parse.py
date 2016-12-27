@@ -25,7 +25,6 @@ from builtins import *  # noqa
 
 from future.utils import itervalues
 import re
-import vim
 from ycm import vimsupport
 
 SYNTAX_GROUP_REGEX = re.compile(
@@ -71,9 +70,9 @@ class SyntaxGroup( object ):
 
 
 def SyntaxKeywordsForCurrentBuffer():
-  vim.command( 'redir => b:ycm_syntax' )
-  vim.command( 'silent! syntax list' )
-  vim.command( 'redir END' )
+  vimsupport.Command( 'redir => b:ycm_syntax' )
+  vimsupport.Command( 'silent! syntax list' )
+  vimsupport.Command( 'redir END' )
   syntax_output = vimsupport.VimExpressionToPythonType( 'b:ycm_syntax' )
   return _KeywordsFromSyntaxListOutput( syntax_output )
 

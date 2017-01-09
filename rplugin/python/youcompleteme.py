@@ -20,6 +20,7 @@ DIR_OF_YCM = os.path.normpath( os.path.join( DIR_OF_CURRENT_SCRIPT, '..', '..', 
 sys.path.insert(0, DIR_OF_YCM)
 from ycm.setup import SetUpSystemPaths, SetUpYCM
 
+
 @neovim.plugin
 class YouCompleteMePlugin:
 
@@ -29,7 +30,7 @@ class YouCompleteMePlugin:
     self.base_ = None
 
   @neovim.function('YcmEnable', sync=True)
-  def Enable(self):
+  def Enable(self, _):
     assert(isinstance(self, YouCompleteMePlugin))
     SetUpSystemPaths()
 
@@ -55,75 +56,78 @@ class YouCompleteMePlugin:
       self.nvim_.command( 'return 0' )
 
   @neovim.function('YcmGetErrorCount', sync=True)
-  def GetErrorCount(self):
+  def GetErrorCount(self, _):
     return self.ycm_state_.GetErrorCount()
 
   @neovim.function('YcmGetWarningCount', sync=True)
-  def GetWarningCount(self):
+  def GetWarningCount(self, _):
     return self.ycm_state_.GetWarningCount()
 
   @neovim.function('YcmOnVimLeave', sync=False)
-  def OnVimLeave(self):
+  def OnVimLeave(self, _):
     self.ycm_state_.OnVimLeave()
 
   @neovim.function('YcmOnCompleteDone', sync=False)
-  def OnCompleteDone(self):
+  def OnCompleteDone(self, _):
     self.ycm_state_.OnCompleteDone()
 
   @neovim.function('YcmOnBufferVisit', sync=False)
-  def OnBufferVisit(self):
+  def OnBufferVisit(self, _):
     self.ycm_state_.OnBufferVisit()
 
   @neovim.function('YcmOnBufferUnload', sync=False)
-  def OnBufferUnload(self, buffer_file):
-    self.ycm_state_.OnBufferUnload(buffer_file)
+  def OnBufferUnload(self, args):
+    buffer_name = args[0]
+    self.ycm_state_.OnBufferUnload(buffer_name)
 
   @neovim.function('YcmHandleFileParseRequest', sync=True)
-  def HandleFileParseRequest(self, block=False):
-    self.ycm_state_.HandleFileParseRequest(block=bool(block))
+  def HandleFileParseRequest(self, args):
+    block = bool(args[0]) if len(args) == 1 else False
+    self.ycm_state_.HandleFileParseRequest(block)
 
   @neovim.function('YcmOnFileReadyToParse', sync=False)
-  def OnFileReadyToParse(self):
+  def OnFileReadyToParse(self, _):
     self.ycm_state_.OnFileReadyToParse()
 
   @neovim.function('YcmNativeFiletypeCompletionUsable', sync=True)
-  def NativeFiletypeCompletionUsable(self):
+  def NativeFiletypeCompletionUsable(self, _):
     return self.ycm_state_.NativeFiletypeCompletionUsable()
 
   @neovim.function('YcmOnCursorMoved', sync=False)
-  def OnCursorMoved(self):
+  def OnCursorMoved(self, _):
     self.ycm_state_.OnCursorMoved()
 
   @neovim.function('YcmLastEnteredCharIsIdentifierChar', sync=True)
-  def LastEnteredCharIsIdentifierChar(self):
+  def LastEnteredCharIsIdentifierChar(self, _):
     return self.base_.LastEnteredCharIsIdentifierChar()
 
   @neovim.function('YcmOnInsertLeave', sync=False)
-  def OnInsertLeave(self):
+  def OnInsertLeave(self, _):
     self.ycm_state_.OnInsertLeave()
 
   @neovim.function('YcmCurrentIdentifierFinished', sync=True)
-  def CurrentIdentifierFinished(self):
+  def CurrentIdentifierFinished(self, _):
     return self.base_.CurrentIdentifierFinished()
 
   @neovim.function('YcmOnCurrentIdentifierFinished', sync=False)
-  def OnCurrentIdentifierFinished(self):
+  def OnCurrentIdentifierFinished(self, _):
     self.ycm_state_.OnCurrentIdentifierFinished()
 
   @neovim.function('YcmCreateCompletionRequest', sync=True)
-  def CreateCompletionRequest(self, force_semantic=False):
+  def CreateCompletionRequest(self, args):
+    force_semantic = bool(args[0]) if len(args) == 1 else False
     self.ycm_state_.CreateCompletionRequest(force_semantic=bool(force_semantic))
 
   @neovim.function('YcmCompletionStartColumn', sync=True)
-  def CompletionStartColumn(self):
+  def CompletionStartColumn(self, _):
     return self.base_.CompletionStartColumn()
 
   @neovim.function('YcmShowDetailedDiagnostic', sync=True)
-  def ShowDetailedDiagnostic(self):
+  def ShowDetailedDiagnostic(self, _):
     return self.ycm_state_.ShowDetailedDiagnostic()
 
   @neovim.function('YcmDebugInfo', sync=True)
-  def DebugInfo(self):
+  def DebugInfo(self, _):
     return self.ycm_state_.DebugInfo()
 
   @neovim.function('YcmToggleLogs', sync=False)
@@ -131,22 +135,23 @@ class YouCompleteMePlugin:
     self.ycm_state_.ToggleLogs(args)
 
   @neovim.function('YcmSendCommandRequest', sync=False)
-  def SendCommandRequest(self, args, completer):
-    self.ycm_state_.SendCommandRequest(args, completer)
+  def SendCommandRequest(self, args):
+    arguments, completer = (args[0], args[1])
+    self.ycm_state_.SendCommandRequest(arguments, completer)
 
   @neovim.function('YcmGetLogFiles', sync=True)
-  def GetLogfiles(self):
+  def GetLogfiles(self, _):
     return self.ycm_state_.GetLogfiles()
 
   @neovim.function('YcmGetDefinedSubcommands', sync=True)
-  def GetDefinedSubcommands(self):
+  def GetDefinedSubcommands(self, _):
     return self.ycm_state_.GetDefinedSubcommands()
 
   @neovim.function('YcmGetCompletions', sync=True)
-  def GetCompletions(self):
+  def GetCompletions(self, _):
     return self.ycm_state_.GetCompletions()
 
   @neovim.function('YcmPopulateLocationListWithLatestDiagnostics', sync=False)
-  def PopulateLocationListWithLatestDiagnostics(self):
+  def PopulateLocationListWithLatestDiagnostics(self, _):
     self.ycm_state_.PopulateLocationListWithLatestDiagnostics()
 

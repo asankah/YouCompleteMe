@@ -105,7 +105,7 @@ def HandleServerException(ycmd_proxy, display=True, truncate=False):
   """
   try:
     yield
-  except UnknownExtraConf as:
+  except UnknownExtraConf as e:
     if vimsupport.Confirm(str(e)):
       ycmd_proxy.LoadExtraConfFile({'filepath': e.extra_conf_file})
     else:

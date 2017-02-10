@@ -1,5 +1,5 @@
 # Copyright (C) 2011-2012 Google Inc.
-#               2016      YouCompleteMe contributors
+#               2016-2017 YouCompleteMe contributors
 #
 # This file is part of YouCompleteMe.
 #
@@ -44,9 +44,10 @@ from ycm import syntax_parse
 from ycm.client.base_request import (BuildRequestData, HandleServerException)
 from ycm.client.completer_available_request import SendCompleterAvailableRequest
 from ycm.client.command_request import SendCommandRequest
-from ycm.client.completion_request import (CompletionRequest,
-                                           ConvertCompletionDataToVimData)
-from ycm.client.debug_info_request import SendDebugInfoRequest
+from ycm.client.completion_request import ( CompletionRequest,
+                                            ConvertCompletionDataToVimData )
+from ycm.client.debug_info_request import ( SendDebugInfoRequest,
+                                            FormatDebugInfoResponse )
 from ycm.client.omni_completion_request import OmniCompletionRequest
 from ycm.client.event_notification import (SendEventNotificationAsync,
                                            EventNotification)
@@ -176,8 +177,6 @@ class YouCompleteMe(object):
   def _NotifyUserIfServerCrashed(self):
     pass
 
-  def ServerPid(self):
-    return -1
 
   def _ShutdownServer(self):
     pass

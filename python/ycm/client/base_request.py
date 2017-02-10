@@ -30,7 +30,6 @@ import urllib.parse
 import json
 from future.utils import native
 from base64 import b64decode, b64encode
-from retries import retries
 from requests_futures.sessions import FuturesSession
 from ycm.unsafe_thread_pool_executor import UnsafeThreadPoolExecutor
 from ycm import vimsupport
@@ -39,9 +38,10 @@ from ycmd.hmac_utils import CreateRequestHmac, CreateHmac, SecureBytesEqual
 from ycmd.responses import ServerError, UnknownExtraConf
 
 _HEADERS = {'content-type': 'application/json'}
-_EXECUTOR = UnsafeThreadPoolExecutor(max_workers=30)
+_EXECUTOR = UnsafeThreadPoolExecutor( max_workers = 30 )
+_CONNECT_TIMEOUT_SEC = 0.01
 # Setting this to None seems to screw up the Requests/urllib3 libs.
-_DEFAULT_TIMEOUT_SEC = 30
+_READ_TIMEOUT_SEC = 30
 _HMAC_HEADER = 'x-ycm-hmac'
 _logger = logging.getLogger(__name__)
 
@@ -126,13 +126,19 @@ def DisplayServerException(exception, truncate=False):
   vimsupport.PostVimMessage(serialized_exception, truncate=truncate)
 
 
+<<<<<<< HEAD
 def _ToUtf8Json(data):
   return ToBytes(json.dumps(data) if data else None)
 
 
-def MakeServerException(data):
-  if data['exception']['TYPE'] == UnknownExtraConf.__name__:
-    return UnknownExtraConf(data['exception']['extra_conf_file'])
+def _BuildUri( handler ):
+  return native( ToBytes( urllib.parse.urljoin( BaseRequest.server_location,
+                                                handler ) ) )
+
+
+def MakeServerException( data ):
+  if data[ 'exception' ][ 'TYPE' ] == UnknownExtraConf.__name__:
+    return UnknownExtraConf( data[ 'exception' ][ 'extra_conf_file' ] )
 
   return ServerError('{0}: {1}'.format(data['exception']['TYPE'], data[
       'message']))
